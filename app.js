@@ -33,7 +33,7 @@ app.use('/users', usersRouter);
 
 const { Server } = require("socket.io");
 
-const io = new Server(8001, { cors: {
+const io = new Server(3000, { cors: {
   origin:["https://ggoman-front-dhdbtkd.vercel.app", 'http://localhost:5173'] 
 } });
 
