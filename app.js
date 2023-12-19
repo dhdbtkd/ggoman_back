@@ -8,7 +8,6 @@ const { WebSocketServer } = require("ws")
 var _ = require('lodash');
 
 var indexRouter = require('./routes/index');
-var usersRouter = require('./routes/users');
 
 var app = express();
 var server = require('http').createServer(app);
@@ -29,17 +28,35 @@ app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
 app.use('/', indexRouter);
-app.use('/users', usersRouter);
 
 const { Server } = require("socket.io");
 
 const io = new Server(server, { cors: {
-  origin:["https://ggoman-front-dhdbtkd.vercel.app", 'http://localhost:5173'] 
+  origin:["https://ggoman-front-dhdbtkd.vercel.app", 'http://localhost:5173', "https://ggoman-front.vercel.app", "http://192.168.50.31:5173"] 
 } });
 
 const history = [
 ]
 const users = [];
+const remove_user = (user_name)=>{
+  const index = users.findIndex((user) => user.name === user_name);
+    if (index !== -1) {
+        const removed_user = users.splice(index, 1)[0]; // Get the removed element
+        console.log(`Removed: ${removed_user.name}`);
+    } else {
+        console.log(`Element "${user_name}" not found in array.`);
+    }
+}
+const add_user = (user_object) => {
+  const find_user = users.find((user)=>{
+    return user.socket_id == user_object.socket_id
+  })
+  if(find_user){
+    find_user.name = user_object.name;
+  } else {
+    users.push(user_object)
+  }
+}
 io.on("connection", (socket) => {
   if (socket.recovered) {
     // recovery was successful: socket.id, socket.rooms and socket.data were restored
@@ -56,6 +73,7 @@ io.on("connection", (socket) => {
     }
     //유저 리스트 전달
     socket.emit("user_list", users);
+    console.log("🚀 ~ file: app.js:59 ~ io.on ~ users:", users)
   }
 
   //유저가 떠났을 때
@@ -66,13 +84,7 @@ io.on("connection", (socket) => {
       socket.broadcast.emit('user_leave', {
         user_name: socket.data.user_name
       });
-      const index = users.findIndex((user) => user.name === user_name);
-      if (index !== -1) {
-          const removed_user = users.splice(index, 1)[0]; // Get the removed element
-          console.log(`Removed: ${removed_user.name}`);
-      } else {
-          console.log(`Element "${user_name}" not found in array.`);
-      }
+      remove_user(user_name);
     }
     
     
@@ -83,10 +95,11 @@ io.on("connection", (socket) => {
   //기존 친구가 돌아왔을 때
   socket.on("rejoin", (arg)=>{ 
     console.log("user_rejoin", arg);
-    users.push({
+    const add_user_object = {
       socket_id : socket.id,
       name : arg
-    });
+    }
+    add_user(add_user_object);
     socket.data.user_name = arg;
     socket.broadcast.emit("user_rejoin", {
       socket_id : socket.id,
@@ -96,10 +109,11 @@ io.on("connection", (socket) => {
   //새로운 친구가 들어와서 이름 입력했을 때
   socket.on("name_submit", (arg)=>{ 
     console.log("new_member", arg);
-    users.push({
+    const add_user_object = {
       socket_id : socket.id,
       name : arg
-    });
+    }
+    add_user(add_user_object);
     socket.data.user_name = arg;
     socket.broadcast.emit("new_member", {
       socket_id : socket.id,
@@ -115,6 +129,8 @@ io.on("connection", (socket) => {
     if(find_result){
       socket.emit("return_history", find_result);
       console.log("and return history");
+    } else {
+      console.log("There are no history to return");
     }
   })
   //guess 결과 다른 친구에게 전달
@@ -129,6 +145,9 @@ io.on("connection", (socket) => {
         data : [
           arg
         ]
+      }
+      if(history.length > 0){
+        history = [];
       }
       history.push(push_data);
     } else {
