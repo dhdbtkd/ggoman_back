@@ -11,7 +11,7 @@ var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');
 
 var app = express();
-
+var server = require('http').createServer(app);
 // view engine setup
 app.set('views', path.join(__dirname, 'views'));
 app.set('view engine', 'jade');
@@ -33,7 +33,7 @@ app.use('/users', usersRouter);
 
 const { Server } = require("socket.io");
 
-const io = new Server(3000, { cors: {
+const io = new Server(server, { cors: {
   origin:["https://ggoman-front-dhdbtkd.vercel.app", 'http://localhost:5173'] 
 } });
 
@@ -155,4 +155,7 @@ app.use(function(err, req, res, next) {
   res.render('error');
 });
 
+server.listen(3000, function() {
+  console.log('Socket IO server listening on port 3000');
+});
 module.exports = app;
