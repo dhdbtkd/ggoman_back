@@ -129,7 +129,15 @@ io.on("connection", async (socket) => {
   socket.on("from_clinet", (arg)=>{
     console.log("🚀 ~ file: app.js:46 ~ socket.on ~ arg:", arg)
   })
-  
+  //클라이언트 생존신고
+  socket.on("i_am_alive",(name)=>{
+    const add_user_object = {
+      socket_id : socket.id,
+      name : name
+    }
+    add_user(add_user_object);
+    socket.broadcast.emit('he_is_alive', add_user_object);
+  })
   //기존 친구가 돌아왔을 때
   socket.on("rejoin", (arg)=>{ 
     console.log("user_rejoin", arg);
