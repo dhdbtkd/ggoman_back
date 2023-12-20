@@ -6,6 +6,16 @@ var logger = require('morgan');
 const cors = require('cors');
 const { WebSocketServer } = require("ws")
 var _ = require('lodash');
+const redis = require('redis');
+
+const client = redis.createClient({
+    password: 'ggoman',
+    socket: {
+        host: 'redis-14652.c290.ap-northeast-1-2.ec2.cloud.redislabs.com',
+        port: 14652
+    }
+});
+console.log("🚀 ~ file: app.js:18 ~ client:", client)
 
 var indexRouter = require('./routes/index');
 
@@ -31,9 +41,17 @@ app.use('/', indexRouter);
 
 const { Server } = require("socket.io");
 
-const io = new Server(server, { cors: {
-  origin:["https://ggoman-front-dhdbtkd.vercel.app", 'http://localhost:5173', "https://ggoman-front.vercel.app", "http://192.168.50.31:5173"] 
-} });
+const io = new Server(server, { 
+  cors: {
+    origin:["https://ggoman-front-dhdbtkd.vercel.app", 'http://localhost:5173', "https://ggoman-front.vercel.app", "http://192.168.50.31:5173"] 
+  },
+  connectionStateRecovery: {
+    // the backup duration of the sessions and the packets
+    maxDisconnectionDuration: 2 * 60 * 1000,
+    // whether to skip middlewares upon successful recovery
+    skipMiddlewares: true,
+  }
+});
 
 const history = [
 ]
@@ -57,7 +75,9 @@ const add_user = (user_object) => {
     users.push(user_object)
   }
 }
-io.on("connection", (socket) => {
+io.on("connection", async (socket) => {
+  const sockets = await io.fetchSockets();
+  console.log("🚀 ~ file: app.js:70 ~ io.on ~ sockets:", sockets.length)
   if (socket.recovered) {
     // recovery was successful: socket.id, socket.rooms and socket.data were restored
   } else {
