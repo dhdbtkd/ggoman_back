@@ -53,9 +53,9 @@ const io = new Server(server, {
   }
 });
 
-const history = [
+let history = [
 ]
-const users = [];
+let users = [];
 const remove_user = (user_name)=>{
   const index = users.findIndex((user) => user.name === user_name);
     if (index !== -1) {
@@ -74,10 +74,22 @@ const add_user = (user_object) => {
   } else {
     users.push(user_object)
   }
+  
+}
+const check_alive = async (io)=>{
+  const sockets = await io.fetchSockets();
+  let filtered_user = [];
+  sockets.forEach((socket)=>{
+    console.log("check_alive", socket.id);
+    const filter = users.filter((user)=>{
+      return user.socket_id == socket.id;
+    })
+    if(filter.length>0) filtered_user = [...filtered_user,...filter];
+  })
+  users = [...filtered_user];
 }
 io.on("connection", async (socket) => {
-  const sockets = await io.fetchSockets();
-  console.log("🚀 ~ file: app.js:70 ~ io.on ~ sockets:", sockets.length)
+  
   if (socket.recovered) {
     // recovery was successful: socket.id, socket.rooms and socket.data were restored
   } else {
@@ -93,7 +105,8 @@ io.on("connection", async (socket) => {
     }
     //유저 리스트 전달
     socket.emit("user_list", users);
-    console.log("🚀 ~ file: app.js:59 ~ io.on ~ users:", users)
+    console.log("🚀 ~ file: app.js:59 ~ io.on ~ users:", users);
+    check_alive(io);
   }
 
   //유저가 떠났을 때
@@ -106,12 +119,17 @@ io.on("connection", async (socket) => {
       });
       remove_user(user_name);
     }
-    
-    
   });
+  //history 초기화
+  socket.on('reset_history', ()=>{
+    history = [];
+    socket.broadcast.emit("clear", history);
+    socket.emit("clear", history);
+  })
   socket.on("from_clinet", (arg)=>{
     console.log("🚀 ~ file: app.js:46 ~ socket.on ~ arg:", arg)
   })
+  
   //기존 친구가 돌아왔을 때
   socket.on("rejoin", (arg)=>{ 
     console.log("user_rejoin", arg);
@@ -125,6 +143,7 @@ io.on("connection", async (socket) => {
       socket_id : socket.id,
       name : arg
     });
+    console.log("after user_rejoin", users);
   })
   //새로운 친구가 들어와서 이름 입력했을 때
   socket.on("name_submit", (arg)=>{ 
@@ -139,6 +158,7 @@ io.on("connection", async (socket) => {
       socket_id : socket.id,
       name : arg
     });
+    console.log("after new user", users);
   })
   //guess 히스토리 요청
   socket.on("request_history", (today_number)=>{
