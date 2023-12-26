@@ -176,10 +176,15 @@ io.on("connection", async (socket) => {
     })
     if(find_result){
       socket.emit("return_history", find_result);
+      console.log("🚀 ~ file: app.js:179 ~ socket.on ~ find_result:", find_result)
       console.log("and return history");
     } else {
       console.log("There are no history to return");
     }
+  })
+  //guess 가 아닌 일반 텍스트를 전달
+  socket.on("plain_text_to_server", (arg)=>{
+    socket.broadcast.emit("plain_text_from_server", arg);
   })
   //guess 결과 다른 친구에게 전달
   socket.on("guess_result_to_server", (arg)=>{
