@@ -6,19 +6,8 @@ var logger = require('morgan');
 const cors = require('cors');
 const { WebSocketServer } = require("ws")
 var _ = require('lodash');
-const redis = require('redis');
-
-const client = redis.createClient({
-    password: 'ggoman',
-    socket: {
-        host: 'redis-14652.c290.ap-northeast-1-2.ec2.cloud.redislabs.com',
-        port: 14652
-    }
-});
-console.log("🚀 ~ file: app.js:18 ~ client:", client)
 
 var indexRouter = require('./routes/index');
-
 var app = express();
 var server = require('http').createServer(app);
 // view engine setup
@@ -43,12 +32,10 @@ const { Server } = require("socket.io");
 
 const io = new Server(server, { 
   cors: {
-    origin:["https://ggoman-front-dhdbtkd.vercel.app", 'http://localhost:5173', "https://ggoman-front.vercel.app", "http://192.168.50.31:5173"] 
+    origin:["https://ggoman-front-dhdbtkd.vercel.app", "https://ggoman-front.vercel.app"] 
   },
   connectionStateRecovery: {
-    // the backup duration of the sessions and the packets
     maxDisconnectionDuration: 2 * 60 * 1000,
-    // whether to skip middlewares upon successful recovery
     skipMiddlewares: true,
   }
 });
@@ -59,10 +46,7 @@ let users = [];
 const remove_user = (user_name)=>{
   const index = users.findIndex((user) => user.name === user_name);
     if (index !== -1) {
-        const removed_user = users.splice(index, 1)[0]; // Get the removed element
-        console.log(`Removed: ${removed_user.name}`);
-    } else {
-        console.log(`Element "${user_name}" not found in array.`);
+        const removed_user = users.splice(index, 1)[0]; 
     }
 }
 const add_user = (user_object) => {
@@ -91,13 +75,10 @@ const check_alive = async (io)=>{
 io.on("connection", async (socket) => {
   
   if (socket.recovered) {
-    // recovery was successful: socket.id, socket.rooms and socket.data were restored
+    
   } else {
-    // new or unrecoverable session
-    console.log("connect", socket.id);
     if(socket.data.user_name){
       //유저 네임이 있는 유저가 접속 했을 때
-      console.log("rejoin", socket.data.user_name);
       socket.emit("user_rejoin", {
         socket_id : socket.id,
         name : socket.data.user_name
@@ -127,7 +108,6 @@ io.on("connection", async (socket) => {
     socket.emit("clear", history);
   })
   socket.on("from_clinet", (arg)=>{
-    console.log("🚀 ~ file: app.js:46 ~ socket.on ~ arg:", arg)
   })
   //클라이언트 생존신고
   socket.on("i_am_alive",(name)=>{
@@ -151,7 +131,6 @@ io.on("connection", async (socket) => {
       socket_id : socket.id,
       name : arg
     });
-    console.log("after user_rejoin", users);
   })
   //새로운 친구가 들어와서 이름 입력했을 때
   socket.on("name_submit", (arg)=>{ 
@@ -166,7 +145,6 @@ io.on("connection", async (socket) => {
       socket_id : socket.id,
       name : arg
     });
-    console.log("after new user", users);
   })
   //guess 히스토리 요청
   socket.on("request_history", (today_number)=>{
@@ -176,7 +154,6 @@ io.on("connection", async (socket) => {
     })
     if(find_result){
       socket.emit("return_history", find_result);
-      console.log("🚀 ~ file: app.js:179 ~ socket.on ~ find_result:", find_result)
       console.log("and return history");
     } else {
       console.log("There are no history to return");
@@ -207,22 +184,18 @@ io.on("connection", async (socket) => {
       find_result.data.push(arg);
     }
     socket.broadcast.emit("guess_result_from_server", arg);
-    console.log("🚀 ~ file: app.js:87 ~ socket.on ~ history:", history)
   })
 });
 
-// catch 404 and forward to error handler
 app.use(function(req, res, next) {
   next(createError(404));
 });
 
 // error handler
 app.use(function(err, req, res, next) {
-  // set locals, only providing error in development
   res.locals.message = err.message;
   res.locals.error = req.app.get('env') === 'development' ? err : {};
 
-  // render the error page
   res.status(err.status || 500);
   res.render('error');
 });
